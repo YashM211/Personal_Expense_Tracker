@@ -1,0 +1,134 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+const ExpenseForm = ({ categories, onExpenseCreated, expenseToEdit }) => {
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  async function handleSubmit() {
+    // Validates required fields before sending to API
+    if (!description || !amount || !date || !categoryId) {
+      setErrorMessage("All fields are required.");
+      return;
+    }
+    // Validates that amount is positive
+    if (parseFloat(amount) <= 0) {
+      setErrorMessage("Amount must be greater than zero.");
+      return;
+    }
+
+    setErrorMessage("");
+    if (expenseToEdit) {
+      // modo edição — chama PUT
+      await axios.put(`${API_URL}/expenses/${expenseToEdit.id}/`, {
+        description,
+        amount: parseFloat(amount),
+        date,
+        category_id: parseInt(categoryId),
+      });
+    } else {
+      // modo criação — chama POST
+      await axios.post(`${API_URL}/expenses/`, {
+        description,
+        amount: parseFloat(amount),
+        date,
+        category_id: parseInt(categoryId),
+      });
+    }
+
+    setDescription("");
+    setAmount("");
+    setDate("");
+    setCategoryId("");
+    onExpenseCreated();
+  }
+
+  useEffect(() => {
+    if (expenseToEdit) {
+      setDescription(expenseToEdit.description);
+      setAmount(expenseToEdit.amount);
+      setDate(expenseToEdit.date);
+      setCategoryId(expenseToEdit.category_id);
+    } else {
+      setDescription("");
+      setAmount("");
+      setDate("");
+      setCategoryId("");
+    }
+  }, [expenseToEdit]);
+
+  return (
+    <div className="card">
+      <h2 className="card-title">
+        {expenseToEdit ? "Edit Expense" : "New Expense"}
+      </h2>
+      <div className="form-grid">
+        <div className="form-group full-width">
+          <label className="form-label">Description</label>
+          <input
+            className="form-input"
+            type="text"
+            placeholder="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Amount (USD)</label>
+          <input
+            className="form-input"
+            type="number"
+            placeholder="0.00"
+            min="0"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Date</label>
+          <input
+            className="form-input"
+            type="date"
+            max={new Date().toISOString().split("T")[0]}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </div>
+
+        <div className="form-group full-width">
+          <label className="form-label">Category</label>
+          <select
+            className="form-select"
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+          >
+            <option value="">Select a category</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {errorMessage && <p className="error-message">{errorMessage}</p>}
+
+        <div className="form-actions">
+          <button className="btn btn-primary" onClick={handleSubmit}>
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ExpenseForm;
